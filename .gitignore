@@ -1,0 +1,9 @@
+.env
+__pycache__/
+*.pyc
+.streamlit/secrets.toml
+data/*.xlsx
+data/*.csv
+!data/ejemplo_tar.xlsx
+.venv/
+venv/
