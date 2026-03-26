@@ -4,6 +4,7 @@ import streamlit as st
 import pandas as pd
 from ui.components import render_divider, render_section_label, require_data
 from services.campaign_export import prepare_campaign_df, export_to_csv, export_to_xlsx
+from services.stock_manager import actualizar_estado_tarjeta
 
 
 def render_tab_bandeja():
@@ -113,6 +114,9 @@ def render_tab_bandeja():
         height=400,
     )
 
+    # --- Marcar estado en lote ---
+    _render_bulk_estado(df_filtered)
+
     # --- Exportación ---
     st.markdown("---")
     render_section_label("Exportar campaña")
@@ -139,3 +143,54 @@ def render_tab_bandeja():
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             use_container_width=True,
         )
+
+
+def _render_bulk_estado(df_filtered):
+    """Permite marcar estado en lote para los registros filtrados."""
+    if len(df_filtered) == 0:
+        return
+
+    st.markdown("---")
+    render_section_label("Marcar estado en lote")
+
+    col1, col2, col3 = st.columns([2, 1, 1])
+
+    with col1:
+        nuevo_estado = st.selectbox(
+            "Nuevo estado",
+            options=["pendiente", "enviado WhatsApp", "enviado Mail", "enviado ambos", "rescate manual"],
+            key="bulk_estado_select",
+        )
+
+    with col2:
+        cantidad = st.number_input(
+            "Cantidad",
+            min_value=1,
+            max_value=len(df_filtered),
+            value=len(df_filtered),
+            help=f"De los {len(df_filtered)} filtrados, ¿a cuántos aplicar?",
+            key="bulk_estado_cant",
+        )
+
+    with col3:
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("✅ Aplicar estado", type="primary", use_container_width=True, key="bulk_estado_btn"):
+            indices = df_filtered.index[:cantidad]
+            estados = st.session_state.get("estados", {})
+            df = st.session_state.df
+            aplicados = 0
+
+            for idx in indices:
+                estados[idx] = nuevo_estado
+                df.at[idx, "_estado_gestion"] = nuevo_estado
+
+                # Persistir en disco
+                nro = str(df.at[idx, "_numero_tarjeta"]) if "_numero_tarjeta" in df.columns else ""
+                if nro and nro != "nan":
+                    actualizar_estado_tarjeta(nro, nuevo_estado)
+                aplicados += 1
+
+            st.session_state.estados = estados
+            st.session_state.df = df
+            st.success(f"**{aplicados}** registros marcados como *{nuevo_estado}*.")
+            st.rerun()

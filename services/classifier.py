@@ -71,6 +71,36 @@ def classify_dataframe(df):
     return df
 
 
+def ordenar_cola_contacto(df, historial=None):
+    """Ordena la cola de contacto por reglas explícitas.
+
+    Orden:
+    1. Tipo: crédito primero, débito después
+    2. Días de guarda: descendente (más viejo primero)
+    3. Canal: solo_telefono primero (es la única vía), ambos después (ya recibió mail)
+    """
+    df = df.copy()
+
+    # Columna auxiliar: tipo (crédito=0, débito=1)
+    df["_sort_tipo"] = df["_tipo_tarjeta"].apply(
+        lambda t: 0 if "créd" in str(t).lower() or "cred" in str(t).lower() else 1
+    )
+
+    # Columna auxiliar: días invertidos para orden descendente
+    df["_sort_dias"] = df["_dias_guarda"].fillna(0).astype(int) * -1
+
+    # Columna auxiliar: canal (solo_telefono=0, ambos=1, solo_mail=2)
+    _canal_orden = {"solo_telefono": 0, "ambos": 1, "solo_mail": 2, "sin_contacto": 3}
+    df["_sort_canal"] = df["_contactabilidad"].map(_canal_orden).fillna(3).astype(int)
+
+    df = df.sort_values(["_sort_tipo", "_sort_dias", "_sort_canal"])
+
+    # Limpiar columnas auxiliares
+    df = df.drop(columns=["_sort_tipo", "_sort_dias", "_sort_canal"])
+
+    return df
+
+
 def get_summary(df):
     """Genera resumen estadístico del DataFrame clasificado."""
     total = len(df)

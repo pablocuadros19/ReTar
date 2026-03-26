@@ -6,16 +6,17 @@ from pathlib import Path
 
 # Mapeo de nombres internos a patrones comunes en columnas del Excel
 COLUMN_PATTERNS = {
-    "nombre": ["nombre_completo", "nombre", "cliente", "titular", "denominacion", "razon_social"],
-    "documento": ["nro_documento", "documento", "dni", "cuil", "cuit", "nro_doc", "nrodoc"],
-    "telefono": ["telefono", "tel", "celular", "movil", "phone", "whatsapp"],
+    "nombre": ["cliente", "nombre_completo", "nombre", "titular", "denominacion", "razon_social"],
+    "documento": ["nro. documento", "nro_documento", "nro documento", "documento", "dni", "cuil",
+                   "cuit", "nro_doc", "nrodoc"],
+    "telefono": ["teléfono", "telefono", "tel", "celular", "movil", "phone", "whatsapp"],
     "mail": ["email", "mail", "correo", "e-mail", "e_mail"],
-    "tipo_tarjeta": ["tipo_tarjeta", "tipo tarjeta", "producto"],
-    "fecha_recepcion": ["fecha_recepcion", "fecha recepcion", "fec_recep", "recepcion",
+    "tipo_tarjeta": ["tipo", "tipo_tarjeta", "tipo tarjeta", "producto"],
+    "fecha_recepcion": ["fecha", "fecha_recepcion", "fecha recepcion", "fec_recep", "recepcion",
                         "ingreso", "fecha_ingreso", "fecha ingreso"],
-    "numero_tarjeta": ["nro_tarjeta", "nrotarjeta", "numero_tarjeta", "numero tarjeta",
-                       "nro tarjeta", "pan"],
-    "estado": ["estado_plastico", "estado", "situacion", "status"],
+    "numero_tarjeta": ["nro. tarjeta", "nro_tarjeta", "nro tarjeta", "nrotarjeta",
+                       "numero_tarjeta", "numero tarjeta", "pan"],
+    "estado": ["estado", "estado_plastico", "situacion", "status"],
 }
 
 # Columnas requeridas vs opcionales
@@ -25,11 +26,15 @@ OPTIONAL_COLUMNS = ["documento", "telefono", "mail", "tipo_tarjeta",
 
 
 def load_file(uploaded_file):
-    """Carga un archivo Excel o CSV y devuelve un DataFrame."""
+    """Carga un archivo Excel o CSV y devuelve un DataFrame.
+
+    Detecta automáticamente si las primeras filas son título/vacías
+    y las omite para encontrar los headers reales.
+    """
     name = uploaded_file.name.lower()
     try:
         if name.endswith(".xlsx") or name.endswith(".xls"):
-            df = pd.read_excel(uploaded_file, engine="openpyxl")
+            df = _load_excel_smart(uploaded_file)
         elif name.endswith(".csv"):
             df = pd.read_csv(uploaded_file, encoding="utf-8", sep=None, engine="python")
         else:
@@ -37,9 +42,70 @@ def load_file(uploaded_file):
 
         # Limpiar nombres de columna
         df.columns = df.columns.str.strip()
+
+        # Eliminar filas completamente vacías
+        df = df.dropna(how="all").reset_index(drop=True)
+
         return df
     except Exception as e:
         raise ValueError(f"Error al leer el archivo: {e}")
+
+
+def _load_excel_smart(uploaded_file):
+    """Carga Excel detectando automáticamente la fila de headers.
+
+    El Excel de TAR tiene:
+    - Fila 1: "Detalle de Plásticos" (título)
+    - Fila 2: vacía
+    - Fila 3: headers reales
+    - Fila 4+: datos
+
+    Esta función detecta eso automáticamente.
+    """
+    # Intentar leer las primeras filas sin header para analizar
+    df_raw = pd.read_excel(uploaded_file, engine="openpyxl", header=None, nrows=10)
+
+    # Buscar la fila que tiene los headers reales
+    header_row = _find_header_row(df_raw)
+
+    # Volver al inicio del archivo
+    uploaded_file.seek(0)
+
+    # Leer con el header correcto
+    df = pd.read_excel(uploaded_file, engine="openpyxl", header=header_row)
+
+    return df
+
+
+def _find_header_row(df_raw):
+    """Detecta en qué fila están los headers reales.
+
+    Busca la fila que tenga más coincidencias con nombres de columna conocidos.
+    """
+    # Palabras clave que indican que es una fila de headers
+    keywords = set()
+    for patterns in COLUMN_PATTERNS.values():
+        for p in patterns:
+            keywords.add(p.lower())
+
+    best_row = 0
+    best_score = 0
+
+    for i in range(min(5, len(df_raw))):
+        row_values = df_raw.iloc[i].astype(str).str.lower().str.strip()
+        score = 0
+        for val in row_values:
+            if val in ("nan", "", "none"):
+                continue
+            for kw in keywords:
+                if kw in val or val in kw:
+                    score += 1
+                    break
+        if score > best_score:
+            best_score = score
+            best_row = i
+
+    return best_row
 
 
 def detect_columns(df):
@@ -48,21 +114,26 @@ def detect_columns(df):
     used_cols = set()
     df_cols_lower = {col: col.lower().strip().replace(" ", "_") for col in df.columns}
 
+    # Crear variantes normalizadas para comparación
+    def normalize(s):
+        return s.lower().strip().replace(" ", "_").replace(".", "")
+
     # Dos pasadas: primero matches exactos, después parciales
     for exact_only in [True, False]:
         for internal_name, patterns in COLUMN_PATTERNS.items():
             if internal_name in column_map:
                 continue
             best_match = None
-            for col, col_lower in df_cols_lower.items():
+            for col in df.columns:
                 if col in used_cols:
                     continue
+                col_norm = normalize(col)
                 for pattern in patterns:
-                    pattern_norm = pattern.lower().replace(" ", "_")
-                    if exact_only and pattern_norm == col_lower:
+                    pattern_norm = normalize(pattern)
+                    if exact_only and pattern_norm == col_norm:
                         best_match = col
                         break
-                    elif not exact_only and pattern_norm in col_lower:
+                    elif not exact_only and (pattern_norm in col_norm or col_norm in pattern_norm):
                         best_match = col
                         break
                 if best_match:

@@ -4,6 +4,7 @@ __pycache__/
 .streamlit/secrets.toml
 data/*.xlsx
 data/*.csv
+data/*.json
 !data/ejemplo_tar.xlsx
 .venv/
 venv/

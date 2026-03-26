@@ -152,6 +152,20 @@ def normalize_dataframe(df, column_map):
     else:
         df["_documento"] = ""
 
+    # Número de tarjeta
+    if "numero_tarjeta" in column_map:
+        col = column_map["numero_tarjeta"]
+        df["_numero_tarjeta"] = df[col].apply(lambda x: str(x).strip() if pd.notna(x) else "")
+    else:
+        df["_numero_tarjeta"] = ""
+
+    # Estado original del plástico
+    if "estado" in column_map:
+        col = column_map["estado"]
+        df["_estado_original"] = df[col].apply(lambda x: str(x).strip() if pd.notna(x) else "")
+    else:
+        df["_estado_original"] = ""
+
     return df
 
 

@@ -224,11 +224,11 @@ def inject_css():
 
     /* Loader perrito */
     @keyframes olfatear {
-        0% { transform: translateX(-80px) scaleX(1); }
-        45% { transform: translateX(80px) scaleX(1); }
-        50% { transform: translateX(80px) scaleX(-1); }
-        95% { transform: translateX(-80px) scaleX(-1); }
-        100% { transform: translateX(-80px) scaleX(1); }
+        0% { transform: translateX(-80px) scaleX(-1); }
+        45% { transform: translateX(80px) scaleX(-1); }
+        50% { transform: translateX(80px) scaleX(1); }
+        95% { transform: translateX(-80px) scaleX(1); }
+        100% { transform: translateX(-80px) scaleX(-1); }
     }
     .perrito-loader {
         text-align: center;
@@ -236,7 +236,7 @@ def inject_css():
         overflow: hidden;
     }
     .perrito-loader img {
-        width: 80px;
+        width: 120px;
         animation: olfatear 3s ease-in-out infinite;
     }
     .perrito-loader p {
@@ -257,6 +257,25 @@ def inject_css():
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
 
+    /* File uploader — estilo NyPer */
+    [data-testid="stFileUploaderDropzone"] {
+        border: 2px dashed #c8e6d5 !important;
+        border-radius: 12px !important;
+        background: #f0f9f4 !important;
+        transition: all 0.2s ease;
+    }
+    [data-testid="stFileUploaderDropzone"]:hover {
+        border-color: #00A651 !important;
+        background: #e8f5ee !important;
+    }
+    [data-testid="stFileUploaderDropzone"] button {
+        font-size: 0 !important;
+    }
+    [data-testid="stFileUploaderDropzone"] button::after {
+        content: "Buscar archivo";
+        font-size: 0.875rem;
+    }
+
     /* Responsive */
     @media (max-width: 768px) {
         .header-gradient h1 { font-size: 1.5rem; }
@@ -265,3 +284,30 @@ def inject_css():
     }
     </style>
     """, unsafe_allow_html=True)
+
+
+def inject_uploader_translation():
+    """Traduce el file uploader de Streamlit al español via JS en el parent frame."""
+    import streamlit.components.v1 as components
+    components.html("""
+    <script>
+    const doc = window.parent.document;
+    function traducir() {
+        doc.querySelectorAll('[data-testid="stFileUploaderDropzone"]').forEach(dz => {
+            dz.querySelectorAll('span').forEach(s => {
+                if (s.textContent.includes('Drag and drop')) {
+                    s.textContent = 'Arrastrá y soltá tu Excel acá';
+                }
+            });
+            dz.querySelectorAll('small').forEach(s => {
+                if (s.textContent.includes('Limit')) {
+                    s.textContent = 'Límite 200MB por archivo';
+                }
+            });
+        });
+    }
+    const obs = new MutationObserver(traducir);
+    obs.observe(doc.body, {childList: true, subtree: true});
+    traducir();
+    </script>
+    """, height=0)
