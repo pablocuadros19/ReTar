@@ -7,7 +7,8 @@ from io import BytesIO
 
 from ui.components import (render_divider, render_section_label, render_badge,
                            render_msg_preview, render_copy_button, require_data)
-from services.message_engine import get_message_wa, get_message_mail, get_wa_url, get_mailto_url
+from services.message_engine import get_message_wa, get_message_mail, get_wa_url, get_wa_app_url, get_mailto_url
+from services.normalizer import format_phone_display
 from services.classifier import ordenar_cola_contacto
 from services.contact_history import (
     cargar_historial, registrar_contacto, contar_contactos
@@ -361,7 +362,7 @@ def _render_contact_card(row, real_idx, operador, sucursal, historial):
             </div>
         </div>
         <div style="display:flex; gap:2rem; font-size:0.85rem; color:#555;">
-            <span>📱 {row.get("_telefono_norm", "—")}</span>
+            <span>📱 {format_phone_display(row.get("_telefono_norm"))}</span>
             <span>✉️ {row.get("_mail_norm", "—")}</span>
             <span>📅 Días guarda: <b>{row.get("_dias_guarda", "—")}</b></span>
             <span>📡 {row.get("_canal_sugerido", "—")}</span>
@@ -443,14 +444,18 @@ def _render_wa_section(row, real_idx, operador, sucursal, historial):
         label_visibility="collapsed",
     )
 
-    col_wa1, col_wa2, col_wa3 = st.columns(3)
+    col_wa1, col_wa2, col_wa3, col_wa4 = st.columns(4)
     with col_wa1:
         render_copy_button(wa_msg_edited, "📋 Copiar mensaje WA", key=f"copy_wa_{real_idx}")
     with col_wa2:
+        wa_app_url = get_wa_app_url(row.get("_telefono_norm"), wa_msg_edited)
+        if wa_app_url:
+            st.link_button("💬 Abrir WhatsApp", wa_app_url, use_container_width=True)
+    with col_wa3:
         wa_url = get_wa_url(row.get("_telefono_norm"), wa_msg_edited)
         if wa_url:
-            st.link_button("💬 Abrir WhatsApp Web", wa_url, use_container_width=True)
-    with col_wa3:
+            st.link_button("🌐 WhatsApp Web", wa_url, use_container_width=True)
+    with col_wa4:
         if st.button("🔄 Regenerar mensaje", key=f"regen_wa_{real_idx}", use_container_width=True):
             new_msg = get_message_wa(row, operador, sucursal)
             st.session_state[wa_key] = new_msg

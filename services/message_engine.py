@@ -330,6 +330,14 @@ def get_wa_url(phone, message):
     return f"https://wa.me/{phone}?text={encoded}"
 
 
+def get_wa_app_url(phone, message):
+    """Genera URL con protocolo whatsapp:// que abre WhatsApp común (no Business)."""
+    if not phone:
+        return None
+    encoded = urllib.parse.quote(message)
+    return f"https://api.whatsapp.com/send?phone={phone}&text={encoded}"
+
+
 def get_mailto_url(email, subject, body):
     """Genera URL mailto con asunto y cuerpo precargado."""
     if not email:

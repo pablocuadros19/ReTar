@@ -10,7 +10,12 @@ def normalize_phone(raw):
     if not raw or pd.isna(raw):
         return None
 
-    digits = re.sub(r"\D", "", str(raw))
+    # Si viene como float de Excel (ej: 1167890000.0), convertir a int primero
+    raw_str = str(raw)
+    if isinstance(raw, float):
+        raw_str = str(int(raw))
+
+    digits = re.sub(r"\D", "", raw_str)
 
     if len(digits) < 8:
         return None
@@ -42,13 +47,29 @@ def normalize_phone(raw):
 
     # 8 dígitos sin código de área → asumir Buenos Aires (11)
     if len(digits) == 8:
-        return f"5411{digits}"
+        return f"54911{digits}"
 
     # Fallback: tomar últimos 10 dígitos
     if len(digits) > 10:
         return f"549{digits[-10:]}"
 
     return None
+
+
+def format_phone_display(phone):
+    """Formatea número normalizado para mostrar: +54 9 11 XXXX-XXXX."""
+    if not phone:
+        return "—"
+    # Quitar el 549 del inicio
+    if phone.startswith("549") and len(phone) == 13:
+        rest = phone[3:]  # 10 dígitos: código de área + número
+        # Buenos Aires (11): 2 dígitos área + 8 número
+        if rest.startswith("11"):
+            return f"+54 9 11 {rest[2:6]}-{rest[6:]}"
+        # Interior 3 dígitos de área
+        if len(rest) == 10:
+            return f"+54 9 {rest[:3]} {rest[3:6]}-{rest[6:]}"
+    return f"+{phone}"
 
 
 def validate_email(raw):
