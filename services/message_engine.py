@@ -204,13 +204,22 @@ def _get_beneficio(tipo_tarjeta):
 
 
 def _format_fecha(fecha):
-    """Formatea fecha para incluir en mensaje."""
-    if fecha and not pd.isna(fecha):
+    """Formatea fecha para incluir en mensaje — solo dd/mm/aaaa, sin hora ni timezone."""
+    if fecha is None:
+        return ""
+    try:
+        if pd.isna(fecha):
+            return ""
+    except Exception:
+        pass
+    try:
+        return fecha.strftime("%d/%m/%Y")
+    except AttributeError:
+        # String o Timestamp — parsear y formatear limpio
         try:
-            return fecha.strftime("%d/%m/%Y")
+            return pd.to_datetime(str(fecha)).strftime("%d/%m/%Y")
         except Exception:
-            return str(fecha)
-    return ""
+            return ""
 
 
 def _clean_message(msg):
