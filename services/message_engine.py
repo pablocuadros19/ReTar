@@ -231,6 +231,11 @@ def _clean_message(msg):
     msg = re.sub(r'desde el\s+\n', '.\n', msg)
     # Limpiar "el {fecha}" suelto sin fecha
     msg = re.sub(r'el\s+y\b', 'y', msg)
+    # Limpiar "desde hace días" / "pasaron días" / "transcurrieron días" sin número
+    msg = re.sub(r'desde hace\s+días', 'hace varios días', msg)
+    msg = re.sub(r'pasaron\s+días', 'pasaron varios días', msg)
+    msg = re.sub(r'transcurrieron\s+días', 'transcurrieron varios días', msg)
+    msg = re.sub(r'pendiente desde hace\s+días', 'pendiente desde hace varios días', msg)
     # Limpiar ". \n" o ".  \n" que quedan cuando beneficio está vacío
     msg = re.sub(r'\. +\n', '.\n', msg)
     # Limpiar " . " sueltos

@@ -426,10 +426,18 @@ def _render_wa_section(row, real_idx, operador, sucursal, historial):
     """Renderiza sección de WhatsApp con mensaje y acciones."""
     render_section_label("Mensaje WhatsApp")
 
+    # Advertencia si el número parece sospechoso
+    tel = row.get("_telefono_norm", "")
+    if tel:
+        if len(tel) < 12 or len(tel) > 13:
+            st.warning(f"⚠️ El número {tel} tiene largo inusual ({len(tel)} dígitos). Verificá antes de enviar.")
+        elif not tel.startswith("549"):
+            st.warning(f"⚠️ El número {tel} no tiene formato argentino esperado (549...). Verificá antes de enviar.")
+
     # Verificar límite diario
     enviados_hoy = st.session_state.get("wa_enviados_hoy", 0)
     if enviados_hoy >= WA_LIMITE_DIARIO:
-        st.warning("⚠️ Llegaste al límite diario de WhatsApp (15). Continuá mañana para evitar baneo.")
+        st.warning("⚠️ Llegaste al límite diario de WhatsApp (20). Continuá mañana para evitar baneo.")
 
     wa_key = f"_wa_msg_{real_idx}"
     if wa_key not in st.session_state:
