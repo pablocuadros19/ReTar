@@ -47,6 +47,16 @@ for key, val in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
+# Recuperar datos desde stock en disco si la sesión está vacía (nuevo browser, celu, F5)
+if st.session_state.df is None:
+    from services.stock_manager import cargar_stock, reconstruir_df_desde_stock
+    if cargar_stock():
+        df_rec, estados_rec = reconstruir_df_desde_stock()
+        if df_rec is not None:
+            st.session_state.df = df_rec
+            st.session_state.estados = estados_rec
+            st.session_state.indice_contacto = 0
+
 
 # --- Sidebar: logo + config operador ---
 render_sidebar_logo()
