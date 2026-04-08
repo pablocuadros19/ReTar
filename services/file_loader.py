@@ -1,8 +1,6 @@
 """Carga y parseo de archivos Excel/CSV exportados desde TAR."""
 
 import pandas as pd
-import streamlit as st
-from pathlib import Path
 
 # Mapeo de nombres internos a patrones comunes en columnas del Excel
 COLUMN_PATTERNS = {
@@ -40,8 +38,12 @@ def load_file(uploaded_file):
         else:
             raise ValueError(f"Formato no soportado: {name}")
 
-        # Limpiar nombres de columna
-        df.columns = df.columns.str.strip()
+        # Limpiar nombres de columna — asegurar que todos sean strings
+        df.columns = [
+            str(c).strip() if (c is not None and str(c) not in ("nan", "None", ""))
+            else f"_col_{i}"
+            for i, c in enumerate(df.columns)
+        ]
 
         # Eliminar filas completamente vacías
         df = df.dropna(how="all").reset_index(drop=True)
@@ -112,11 +114,9 @@ def detect_columns(df):
     """Intenta detectar automáticamente qué columna del Excel corresponde a cada campo interno."""
     column_map = {}
     used_cols = set()
-    df_cols_lower = {col: col.lower().strip().replace(" ", "_") for col in df.columns}
 
-    # Crear variantes normalizadas para comparación
     def normalize(s):
-        return s.lower().strip().replace(" ", "_").replace(".", "")
+        return str(s).lower().strip().replace(" ", "_").replace(".", "")
 
     # Dos pasadas: primero matches exactos, después parciales
     for exact_only in [True, False]:
