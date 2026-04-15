@@ -48,6 +48,11 @@ def load_file(uploaded_file):
         # Eliminar filas completamente vacías
         df = df.dropna(how="all").reset_index(drop=True)
 
+        # Convertir columnas object con NaN a string vacío para evitar
+        # errores de tipo 'float is not iterable' en procesamientos posteriores
+        for col in df.select_dtypes(include=["object"]).columns:
+            df[col] = df[col].fillna("")
+
         return df
     except Exception as e:
         raise ValueError(f"Error al leer el archivo: {e}")
@@ -94,9 +99,10 @@ def _find_header_row(df_raw):
     best_score = 0
 
     for i in range(min(5, len(df_raw))):
-        row_values = df_raw.iloc[i].astype(str).str.lower().str.strip()
+        row_values = df_raw.iloc[i].fillna("").astype(str).str.lower().str.strip()
         score = 0
         for val in row_values:
+            val = str(val)  # doble seguro contra floats
             if val in ("nan", "", "none"):
                 continue
             for kw in keywords:
