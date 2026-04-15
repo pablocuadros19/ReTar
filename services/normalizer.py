@@ -58,8 +58,9 @@ def normalize_phone(raw):
 
 def format_phone_display(phone):
     """Formatea número normalizado para mostrar: +54 9 11 XXXX-XXXX."""
-    if not phone:
+    if phone is None or (isinstance(phone, float)) or str(phone).strip() in ("", "nan", "None"):
         return "—"
+    phone = str(phone).strip()
     # Quitar el 549 del inicio
     if phone.startswith("549") and len(phone) == 13:
         rest = phone[3:]  # 10 dígitos: código de área + número
