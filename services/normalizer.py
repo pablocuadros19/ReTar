@@ -192,10 +192,12 @@ def normalize_dataframe(df, column_map):
 
 def _normalize_card_type(raw):
     """Normaliza el tipo de tarjeta a categorías estándar."""
-    if not raw or pd.isna(raw):
+    if raw is None or (isinstance(raw, float) and pd.isna(raw)):
         return "Sin dato"
 
     val = str(raw).lower().strip()
+    if val in ("nan", "", "none"):
+        return "Sin dato"
 
     if any(k in val for k in ["debito", "débito", "deb"]):
         return "Débito"
